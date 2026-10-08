@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Horizon Rush</title>
+    <style>
+      :root {
+        --bg: #081018;
+        --panel: rgba(12, 16, 24, 0.75);
+        --panel-border: rgba(255, 255, 255, 0.22);
+        --text: #ecf7ff;
+        --accent: #53d5ff;
+        --gold: #ffd166;
+        --danger: #ff6b6b;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, Arial, sans-serif;
+      }
+
+      #game {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: linear-gradient(#9bdfff, #d6f0ff 40%, #c9e3b6 62%, #6e8f59 100%);
+      }
+
+      #hud {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .panel {
+        position: absolute;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 18px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+      }
+
+      #top-bar {
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        height: 94px;
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--gold), var(--accent));
+        box-shadow: 0 0 24px rgba(83, 213, 255, 0.7);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.1rem;
+        letter-spacing: 0.24rem;
+        text-transform: uppercase;
+        font-weight: 900;
+      }
+
+      .stats {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 0.84rem;
+        letter-spacing: 0.08rem;
+        text-transform: uppercase;
+      }
+
+      .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+
+      .stat .label {
+        opacity: 0.72;
+        font-size: 0.65rem;
+      }
+
+      .stat .value {
+        font-weight: 900;
+        font-size: 1.3rem;
+        color: var(--text);
+      }
+
+      #speed-panel {
+        position: absolute;
+        right: 18px;
+        bottom: 18px;
+        width: 230px;
+        height: 160px;
+        padding: 18px 18px 24px;
+      }
+
+      .speed-ring {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .speed-ring::before {
+        content: "";
+        position: absolute;
+        inset: 10px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.12);
+        box-shadow: inset 0 0 18px rgba(83, 213, 255, 0.12);
+      }
+
+      .speed-ring::after {
+        content: "";
+        position: absolute;
+        inset: 30px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.1);
+      }
+
+      .speed-text {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+      }
+
+      .speed-number {
+        font-weight: 900;
+        font-size: 2.3rem;
+        line-height: 1;
+      }
+
+      .speed-unit {
+        font-size: 0.7rem;
+        letter-spacing: 0.2rem;
+        text-transform: uppercase;
+        opacity: 0.75;
+      }
+
+      .mini-panel {
+        position: absolute;
+        left: 18px;
+        bottom: 18px;
+        width: 250px;
+        padding: 14px 16px;
+      }
+
+      .label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 0.7rem;
+        letter-spacing: 0.12rem;
+        text-transform: uppercase;
+        opacity: 0.82;
+      }
+
+      .bar {
+        position: relative;
+        width: 100%;
+        height: 12px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+
+      .bar-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 50%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--accent), var(--gold));
+        box-shadow: 0 0 18px rgba(83,213,255,0.7);
+      }
+
+      .event-panel {
+        position: absolute;
+        left: 50%;
+        top: 120px;
+        transform: translateX(-50%);
+        padding: 14px 18px;
+        min-width: 380px;
+      }
+
+      #event-title {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.2rem;
+        opacity: 0.78;
+        margin-bottom: 8px;
+      }
+
+      .event-name {
+        font-size: 1.3rem;
+        font-weight: 900;
+        letter-spacing: 0.1rem;
+      }
+
+      #menu {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at center, rgba(10,20,35,0.45), rgba(7,9,15,0.9));
+        z-index: 10;
+      }
+
+      .menu-card {
+        width: min(680px, 88vw);
+        background: rgba(10, 14, 20, 0.82);
+        border: 1px solid var(--panel-border);
+        border-radius: 26px;
+        box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+        overflow: hidden;
+      }
+
+      .menu-head {
+        padding: 24px 26px 16px;
+        background: linear-gradient(180deg, rgba(83,213,255,0.12), rgba(255,255,255,0.02));
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+
+      .menu-kicker {
+        font-size: 0.7rem;
+        letter-spacing: 0.28rem;
+        text-transform: uppercase;
+        opacity: 0.8;
+      }
+
+      .menu-title {
+        margin-top: 8px;
+        font-weight: 900;
+        font-size: clamp(2rem, 4vw, 4rem);
+        letter-spacing: 0.08rem;
+      }
+
+      .menu-body {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        gap: 16px;
+        padding: 22px;
+      }
+
+      .mode-btn {
+        appearance: none;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+        border-radius: 18px;
+        padding: 18px 14px;
+        color: var(--text);
+        text-align: left;
+        cursor: pointer;
+        transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .mode-btn:hover {
+        transform: translateY(-2px);
+        border-color: rgba(83, 213, 255, 0.7);
+        box-shadow: 0 18px 30px rgba(83, 213, 255, 0.12);
+      }
+
+      .mode-tag {
+        display: inline-block;
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18rem;
+        color: var(--gold);
+        margin-bottom: 10px;
+      }
+
+      .mode-name {
+        font-size: 1.2rem;
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+
+      .mode-desc {
+        opacity: 0.8;
+        font-size: 0.82rem;
+        line-height: 1.5;
+      }
+
+      .controls-hint {
+        position: absolute;
+        right: 18px;
+        top: 124px;
+        width: 240px;
+        padding: 12px 14px;
+        font-size: 0.75rem;
+        line-height: 1.7;
+      }
+
+      #message {
+        position: absolute;
+        left: 50%;
+        bottom: 28px;
+        transform: translateX(-50%);
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(9, 15, 20, 0.7);
+        border: 1px solid rgba(255,255,255,0.12);
+        letter-spacing: 0.12rem;
+        text-transform: uppercase;
+        font-size: 0.68rem;
+        opacity: 0.96;
+      }
+
+      @media (max-width: 900px) {
+        #top-bar {
+          height: auto;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .stats {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .controls-hint {
+          display: none;
+        }
+
+        .menu-body {
+          grid-template-columns: 1fr;
+        }
+
+        .event-panel {
+          top: 125px;
+          min-width: auto;
+          left: 16px;
+          right: 16px;
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <div id="hud">
+      <div id="top-bar" class="panel">
+        <div class="brand">
+          <div class="logo"></div>
+          <h1>Horizon Rush</h1>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="label">Career</div>
+            <div id="career-level" class="value">LV 1</div>
+          </div>
+          <div class="stat">
+            <div class="label">Cash</div>
+            <div id="cash" class="value">$0</div>
+          </div>
+          <div class="stat">
+            <div class="label">XP</div>
+            <div id="xp" class="value">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="event-panel" class="panel event-panel">
+        <div id="event-title">Current Event</div>
+        <div id="event-name" class="event-name">Coastal Sprint</div>
+      </div>
+
+      <div class="panel controls-hint">
+        <div class="label-row"><span>Drive</span><span>WASD</span></div>
+        <div class="label-row"><span>Boost</span><span>Space</span></div>
+        <div class="label-row"><span>Brake</span><span>Shift</span></div>
+      </div>
+
+      <div id="speed-panel" class="panel">
+        <div class="speed-ring">
+          <div class="speed-text">
+            <div id="speed-number" class="speed-number">0</div>
+            <div class="speed-unit">km/h</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mini-panel">
+        <div class="label-row">
+          <span>Boost</span>
+          <span id="boost-value">100%</span>
+        </div>
+        <div class="bar">
+          <div id="boost-fill" class="bar-fill" style="width:100%"></div>
+        </div>
+
+        <div class="label-row">
+          <span>Progress</span>
+          <span id="progress-text">0%</span>
+        </div>
+        <div class="bar">
+          <div id="progress-fill" class="bar-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div id="message">Ready to race</div>
+    </div>
+
+    <div id="menu">
+      <div class="menu-card">
+        <div class="menu-head">
+          <div class="menu-kicker">Street Festival</div>
+          <div class="menu-title">Horizon Rush</div>
+        </div>
+
+        <div class="menu-body">
+          <button class="mode-btn" data-mode="coastal">
+            <div class="mode-tag">Career</div>
+            <div class="mode-name">Coastal Sprint</div>
+            <div class="mode-desc">Fast canyon roads and coastal straights. Perfect for warm-up laps.</div>
+          </button>
+
+          <button class="mode-btn" data-mode="city">
+            <div class="mode-tag">Street</div>
+            <div class="mode-name">Neon Circuit</div>
+            <div class="mode-desc">Tight corners, bright skyline, and high-speed downtown runs.</div>
+          </button>
+
+          <button class="mode-btn" data-mode="mountain">
+            <div class="mode-tag">Challenge</div>
+            <div class="mode-name">Summit Trial</div>
+            <div class="mode-desc">Long climbs and technical hairpins over the mountain ridge.</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+      const canvas = document.getElementById('game');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xbfe3ff);
+      scene.fog = new THREE.Fog(0xcfeaff, 30, 160);
+
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 5, 10);
+
+      const hemi = new THREE.HemisphereLight(0xe7f6ff, 0x6f8f67, 1.2);
+      scene.add(hemi);
+
+      const sun = new THREE.DirectionalLight(0xfff4d6, 1.4);
+      sun.position.set(18, 28, 10);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048);
+      sun.shadow.camera.left = -80;
+      sun.shadow.camera.right = 80;
+      sun.shadow.camera.top = 80;
+      sun.shadow.camera.bottom = -80;
+      scene.add(sun);
+
+      const world = {
+        width: 220,
+        height: 220,
+        roadHalfWidth: 10,
+      };
+
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(world.width, world.height),
+        new THREE.MeshStandardMaterial({ color: 0x6f9b4d, roughness: 0.95 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x262b33, roughness: 0.9 });
+      const laneMaterial = new THREE.MeshStandardMaterial({ color: 0xe9edf2, roughness: 0.8 });
+      const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xffd166, emissive: 0x6d4d00, roughness: 0.6 });
+
+      const road = new THREE.Group();
+      scene.add(road);
+
+      function makeRoadSegment(length, zPos) {
+        const segment = new THREE.Group();
+
+        const base = new THREE.Mesh(new THREE.BoxGeometry(32, 0.25, length), roadMaterial);
+        base.position.y = 0.12;
+        base.receiveShadow = true;
+        segment.add(base);
+
+        const laneCenter = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, length), laneMaterial);
+        laneCenter.position.set(0, 0.25, 0);
+        segment.add(laneCenter);
+
+        for (let i = -1; i <= 1; i += 2) {
+          const whiteLine = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 3.5), lineMaterial);
+          whiteLine.position.set(i * 10, 0.26, 0);
+          segment.add(whiteLine);
+        }
+
+        segment.position.z = zPos;
+        road.add(segment);
+      }
+
+      makeRoadSegment(70, -70);
+      makeRoadSegment(70, 0);
+      makeRoadSegment(70, 70);
+      makeRoadSegment(70, 140);
+
+      function addTree(x, z, scale = 1) {
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.4 * scale, 0.6 * scale, 3.2 * scale, 10),
+          new THREE.MeshStandardMaterial({ color: 0x6d4d2d, roughness: 1 })
+        );
+        trunk.position.set(x, 1.6 * scale, z);
+        trunk.castShadow = true;
+        scene.add(trunk);
+
+        const leaves = new THREE.Mesh(
+          new THREE.SphereGeometry(1.8 * scale, 14, 12),
+          new THREE.MeshStandardMaterial({ color: 0x2b8f52, roughness: 1 })
+        );
+        leaves.position.set(x, 4.2 * scale, z);
+        leaves.castShadow = true;
+        scene.add(leaves);
+      }
+
+      for (let i = 0; i < 60; i++) {
+        const x = (Math.random() - 0.5) * 170;
+        const z = (Math.random() - 0.5) * 170;
+        const dist = Math.hypot(x, z);
+        if (dist < 22) continue;
+        addTree(x, z, 0.7 + Math.random() * 1.2);
+      }
+
+      const car = new THREE.Group();
+      scene.add(car);
+
+      const carBody = new THREE.Mesh(
+        new THREE.BoxGeometry(2.7, 0.8, 5.2),
+        new THREE.MeshStandardMaterial({ color: 0x0f63ff, metalness: 0.7, roughness: 0.32 })
+      );
+      carBody.castShadow = true;
+      carBody.position.y = 1.15;
+      car.add(carBody);
+
+      const roof = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 0.8, 2.5),
+        new THREE.MeshStandardMaterial({ color: 0x1c2d3d, metalness: 0.85, roughness: 0.4 })
+      );
+      roof.castShadow = true;
+      roof.position.set(0, 1.9, -0.2);
+      car.add(roof);
+
+      for (const wheelX of [-1.35, 1.35]) {
+        for (const wheelZ of [-1.5, 1.5]) {
+          const wheel = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.52, 0.52, 0.8, 18),
+            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 })
+          );
+          wheel.rotation.z = Math.PI / 2;
+          wheel.castShadow = true;
+          wheel.position.set(wheelX, 0.5, wheelZ);
+          car.add(wheel);
+        }
+      }
+
+      const carGlow = new THREE.PointLight(0x53d5ff, 2, 14, 2);
+      carGlow.position.set(0, 1.5, 0.5);
+      car.add(carGlow);
+
+      const cityLights = [];
+      function addCityLight(x, z, color = 0xffd166) {
+        const light = new THREE.PointLight(color, 2, 12, 2.2);
+        light.position.set(x, 3.2, z);
+        scene.add(light);
+        cityLights.push(light);
+      }
+
+      function createCityZone() {
+        for (let i = 0; i < 28; i++) {
+          const x = -52 + Math.random() * 104;
+          const z = -52 + Math.random() * 104;
+          if (Math.abs(x) < 18 && Math.abs(z) < 18) continue;
+          const building = new THREE.Mesh(
+            new THREE.BoxGeometry(3 + Math.random() * 4, 5 + Math.random() * 22, 3 + Math.random() * 4),
+            new THREE.MeshStandardMaterial({ color: 0x364150, roughness: 0.8 })
+          );
+          building.position.set(x, building.geometry.parameters.height / 2, z);
+          building.castShadow = true;
+          building.receiveShadow = true;
+          scene.add(building);
+
+          if (Math.random() > 0.4) {
+            addCityLight(x + 0.2, z + 0.2, i % 2 === 0 ? 0xffd166 : 0x53d5ff); 
+          }
+        }
+      }
+
+      const mountainBase = new THREE.Mesh(
+        new THREE.ConeGeometry(65, 50, 18),
+        new THREE.MeshStandardMaterial({ color: 0x7a8c7d, roughness: 1 })
+      );
+      mountainBase.position.set(0, 24, -110);
+      mountainBase.rotation.y = Math.PI / 2;
+      mountainBase.castShadow = true;
+      mountainBase.receiveShadow = true;
+      scene.add(mountainBase);
+
+      const checkpointMeshes = [];
+      const checkPoints = [];
+      function setupCheckpoint(x, z, name) {
+        const group = new THREE.Group();
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(2.2, 0.25, 12, 28),
+          new THREE.MeshStandardMaterial({ color: 0x53d5ff, emissive: 0x214a67, emissiveIntensity: 0.8 })
+        );
+        ring.rotation.x = Math.PI / 2;
+        group.add(ring);
+
+        const pillar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.2, 0.2, 3.5, 12),
+          new THREE.MeshStandardMaterial({ color: 0xffd166, emissive: 0x624200, emissiveIntensity: 0.7 })
+        );
+        pillar.position.y = -1.75;
+        group.add(pillar);
+
+        group.position.set(x, 0.8, z);
+        group.userData.name = name;
+        scene.add(group);
+        checkpointMeshes.push(group);
+        checkPoints.push({ x, z, name, hit: false });
+      }
+
+      const modes = {
+        coastal: {
+          name: 'Coastal Sprint',
+          roadCenter: 0,
+          checkpointPositions: [
+            { x: 32, z: -35 },
+            { x: 28, z: 30 },
+            { x: -18, z: 65 },
+            { x: -40, z: -15 }
+          ]
+        },
+        city: {
+          name: 'Neon Circuit',
+          roadCenter: 0,
+          checkpointPositions: [
+            { x: 14, z: -40 },
+            { x: 36, z: 25 },
+            { x: -28, z: 55 },
+            { x: -42, z: -20 }
+          ]
+        },
+        mountain: {
+          name: 'Summit Trial',
+          roadCenter: 0,
+          checkpointPositions: [
+            { x: 20, z: -60 },
+            { x: 40, z: 10 },
+            { x: -2, z: 68 },
+            { x: -36, z: -18 }
+          ]
+        }
+      };
+
+      const ui = {
+        speedNumber: document.getElementById('speed-number'),
+        boostFill: document.getElementById('boost-fill'),
+        boostValue: document.getElementById('boost-value'),
+        progressFill: document.getElementById('progress-fill'),
+        progressText: document.getElementById('progress-text'),
+        message: document.getElementById('message'),
+        eventName: document.getElementById('event-name'),
+        careerLevel: document.getElementById('career-level'),
+        cash: document.getElementById('cash'),
+        xp: document.getElementById('xp')
+      };
+
+      const state = {
+        mode: 'coastal',
+        active: false,
+        speed: 0,
+        maxSpeed: 180,
+        steering: 0,
+        throttle: 0,
+        boost: 100,
+        distance: 0,
+        progress: 0,
+        currentCheckpoint: 0,
+        cash: 0,
+        xp: 0,
+        level: 1,
+        startedAt: 0
+      };
+
+      const controls = {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+        boost: false
+      };
+
+      function clearCheckpoints() {
+        checkpointMeshes.forEach((c) => scene.remove(c));
+        checkpointMeshes.length = 0;
+        checkPoints.length = 0;
+      }
+
+      function loadMode(modeKey) {
+        state.mode = modeKey;
+        state.active = true;
+        state.speed = 0;
+        state.boost = 100;
+        state.distance = 0;
+        state.progress = 0;
+        state.currentCheckpoint = 0;
+        state.startedAt = performance.now();
+
+        clearCheckpoints();
+        const mode = modes[modeKey];
+        ui.eventName.textContent = mode.name;
+        ui.message.textContent = 'Race started';
+
+        mode.checkpointPositions.forEach((cp, index) => {
+          setupCheckpoint(cp.x, cp.z, `cp-${index}`);
+        });
+
+        if (modeKey === 'city') {
+          createCityZone();
+        } else {
+          cityLights.forEach((light) => scene.remove(light));
+        }
+
+        const startX = 0;
+        const startZ = 45;
+        car.position.set(startX, 0, startZ);
+        car.rotation.set(0, Math.PI, 0);
+        camera.position.set(0, 4.8, 9);
+      }
+
+      document.querySelectorAll('.mode-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.getElementById('menu').style.display = 'none';
+          loadMode(button.dataset.mode);
+        });
+      });
+
+      window.addEventListener('keydown', (event) => {
+        const key = event.key.toLowerCase();
+        if (key === 'w' || key === 'arrowup') controls.up = true;
+        if (key === 's' || key === 'arrowdown') controls.down = true;
+        if (key === 'a' || key === 'arrowleft') controls.left = true;
+        if (key === 'd' || key === 'arrowright') controls.right = true;
+        if (key === ' ') controls.boost = true;
+      });
+
+      window.addEventListener('keyup', (event) => {
+        const key = event.key.toLowerCase();
+        if (key === 'w' || key === 'arrowup') controls.up = false;
+        if (key === 's' || key === 'arrowdown') controls.down = false;
+        if (key === 'a' || key === 'arrowleft') controls.left = false;
+        if (key === 'd' || key === 'arrowright') controls.right = false;
+        if (key === ' ') controls.boost = false;
+      });
+
+      function updatePhysics(dt) {
+        if (!state.active) return;
+
+        const steerStrength = 1.25;
+        const accelForce = 48;
+        const brakeForce = 64;
+        const drag = 10;
+
+        let forward = 0;
+        if (controls.up) forward += 1;
+        if (controls.down) forward -= 0.72;
+
+        state.speed += forward * accelForce * dt;
+        state.speed *= 1 - drag * dt / 80;
+
+        if (Math.abs(state.speed) > 0.4 && !controls.up && !controls.down) {
+          state.speed *= 1 - 0.7 * dt;
+        }
+
+        if (controls.boost && state.boost > 0 && Math.abs(state.speed) > 10) {
+          state.speed += 75 * dt;
+          state.boost = Math.max(0, state.boost - 26 * dt);
+        } else {
+          state.boost = Math.min(100, state.boost + 14 * dt);
+        }
+
+        if (state.speed > state.maxSpeed) state.speed = state.maxSpeed;
+        if (state.speed < -state.maxSpeed * 0.45) state.speed = -state.maxSpeed * 0.45;
+
+        const steerInput = (controls.left ? 1 : 0) - (controls.right ? 1 : 0);
+        state.steering += (steerInput - state.steering) * Math.min(1, dt * 8);
+
+        const turnRate = (state.speed / state.maxSpeed) * 1.7;
+        car.rotation.y += state.steering * turnRate * dt * 2.2;
+
+        const forwardVector = new THREE.Vector3(Math.sin(car.rotation.y), 0, Math.cos(car.rotation.y));
+        const sideVector = new THREE.Vector3(Math.cos(car.rotation.y), 0, -Math.sin(car.rotation.y));
+
+        const movement = new THREE.Vector3();
+        movement.addScaledVector(forwardVector, state.speed * dt * 0.9);
+        movement.addScaledVector(sideVector, state.steering * 3.2 * dt * (Math.abs(state.speed) / 40 + 0.2));
+
+        car.position.add(movement);
+        car.position.x = THREE.MathUtils.clamp(car.position.x, -68, 68);
+        car.position.z = THREE.MathUtils.clamp(car.position.z, -90, 90);
+
+        state.distance += Math.abs(state.speed) * dt * 0.5;
+
+        const cp = checkPoints[state.currentCheckpoint];
+        if (cp) {
+          const dx = car.position.x - cp.x;
+          const dz = car.position.z - cp.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < 5) {
+            cp.hit = true;
+            state.currentCheckpoint++;
+            const reward = 150 + Math.floor(state.speed * 3);
+            state.cash += reward;
+            state.xp += 25;
+            ui.message.textContent = `Checkpoint ${state.currentCheckpoint}! +$${reward}`;
+
+            if (state.currentCheckpoint >= checkPoints.length) {
+              state.currentCheckpoint = 0;
+              state.progress = 100;
+              state.cash += 500;
+              state.xp += 120;
+              ui.message.textContent = 'Event complete!';
+            }
+          }
+        }
+
+        state.progress = Math.min(100, (state.currentCheckpoint / checkPoints.length) * 100 + ((checkPoints.length && state.currentCheckpoint === checkPoints.length) ? 0 : 0));
+        if (checkPoints.length > 0) {
+          const current = checkPoints[state.currentCheckpoint];
+          if (current) {
+            const totalProgress = state.currentCheckpoint / checkPoints.length;
+            const partial = 1 - Math.hypot(car.position.x - current.x, car.position.z - current.z) / 30;
+            state.progress = Math.min(100, (totalProgress + partial * 0.65) * 100);
+          }
+        }
+
+        if (state.xp >= 100 * state.level) {
+          state.level += 1;
+          state.maxSpeed += 10;
+          ui.message.textContent = `Level up! LV ${state.level}`;
+        }
+
+        const cameraTarget = new THREE.Vector3(
+          car.position.x - Math.sin(car.rotation.y) * 8,
+          car.position.y + 2.4,
+          car.position.z - Math.cos(car.rotation.y) * 8
+        );
+
+        const desiredPos = new THREE.Vector3(
+          car.position.x + Math.sin(car.rotation.y) * 7,
+          4.4,
+          car.position.z + Math.cos(car.rotation.y) * 7
+        );
+        desiredPos.y = Math.max(3.2, desiredPos.y);
+
+        camera.position.lerp(desiredPos, 0.09);
+        camera.lookAt(car.position.x, 1.5, car.position.z);
+      }
+
+      function updateHud() {
+        const speedKmh = Math.abs(Math.round(state.speed * 2.2));
+        ui.speedNumber.textContent = String(speedKmh);
+
+        const boostPct = Math.round(state.boost);
+        ui.boostValue.textContent = `${boostPct}%`;
+        ui.boostFill.style.width = `${boostPct}%`;
+
+        const progressPct = Math.min(100, Math.round(state.progress));
+        ui.progressText.textContent = `${progressPct}%`;
+        ui.progressFill.style.width = `${progressPct}%`;
+
+        ui.careerLevel.textContent = `LV ${state.level}`;
+        ui.cash.textContent = `$${state.cash}`;
+        ui.xp.textContent = String(state.xp);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const dt = Math.min(0.033, (performance.now() - (animate.last || performance.now())) / 1000);
+        animate.last = performance.now();
+
+        updatePhysics(dt);
+        updateHud();
+        renderer.render(scene, camera);
+      }
+
+      animate();
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    </script>
+  </body>
+</html>
